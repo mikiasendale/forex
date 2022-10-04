@@ -140,6 +140,7 @@ def other_variables(frequency):
        dat=pd.DataFrame([i for i in data.items()][3][1])
        dat.columns=['Dates','FederalFund']
        dat=dat.set_index('Dates')
+       dat['FederalFund']=pd.to_numeric(dat['FederalFund'])
        return dat[::-1]
        
    #--------
@@ -161,3 +162,19 @@ def other_variables(frequency):
  #########################3
 
 dou=other_variables('monthly')
+dou[2].FederalFund[0]
+dou_all=pd.merge(dou[0],dou[1],on='Dates')
+#################################3
+fred_api='3f3ea2b88220ca8b204bdbb8a5ced854'
+# url='https://api.stlouisfed.org/fred/release?release_id=53&api_key='+fred_api+'&file_type=json'
+url='https://api.stlouisfed.org/fred/series/observations?series_id=GNPCA&api_key='+fred_api+'&file_type=json'
+r = requests.get(url)
+data = r.json()
+dat=pd.DataFrame([i for i in data.values()][12])
+#######################
+from urllib.request import urlopen
+f=urlopen(url) 
+json.loads(f.read())
+
+len(data)
+
