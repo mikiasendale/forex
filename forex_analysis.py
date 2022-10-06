@@ -20,6 +20,7 @@ import pytrends
 ##########################
 
 def forex_request(symbol1,symbol2,frequency):
+    import requests
     my_api='CJA0RCBPJIL23J4D'
   
     url= 'https://www.alphavantage.co/query?function='+frequency+'&from_symbol='+symbol1+'&to_symbol='+symbol2+'&outputsize=full'+'&apikey='+my_api
@@ -166,15 +167,17 @@ dou[2].FederalFund[0]
 dou_all=pd.merge(dou[0],dou[1],on='Dates')
 #################################3
 fred_api='3f3ea2b88220ca8b204bdbb8a5ced854'
-# url='https://api.stlouisfed.org/fred/release?release_id=53&api_key='+fred_api+'&file_type=json'
-url='https://api.stlouisfed.org/fred/series/observations?series_id=GNPCA&api_key='+fred_api+'&file_type=json'
+# frequency=w
+url='https://api.stlouisfed.org/fred/series/observations?series_id=GNPCA'+'&api_key='+fred_api+'&file_type=json'
 r = requests.get(url)
 data = r.json()
 dat=pd.DataFrame([i for i in data.values()][12])
-#######################
-from urllib.request import urlopen
-f=urlopen(url) 
-json.loads(f.read())
-
-len(data)
-
+def fred_request_series(series,frequency='a',starttime='1776-07-04',endtime='9999-12-31',transform='lin'):
+    import requests
+    import json
+    fred_api='3f3ea2b88220ca8b204bdbb8a5ced854'
+    url='https://api.stlouisfed.org/fred/series/observations?series_id='+series+'&frequency='+frequency+'&units='+transform+'&observation_start='+starttime+'&observation_end='+endtime+'&api_key='+fred_api+'&file_type=json'
+    r = requests.get(url)
+    data = r.json()
+    dat=pd.DataFrame([i for i in data.values()][12])
+    return dat
