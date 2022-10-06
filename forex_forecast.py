@@ -81,7 +81,7 @@ def fred_request_series(series,frequency='a',starttime='1776-07-04',endtime='999
 def lag_transform(x,n):
     import numpy as np
     import pandas as pd
-    def lag_values(s,n):
+    def lag_values(s,n): # function to get lag values of a list s, for lag=n
         for i in range(0,n):
             s.append(np.nan)
         return s[n:-n]
@@ -93,7 +93,7 @@ def lag_transform(x,n):
     df.columns=x.columns
     return df   
 
-do=pd.merge(pd.merge(fred_request_series('GDP').tail(50),fred_request_series('GDPCA').tail(50),on='Dates'),fred_request_series('DCOILWTICO').tail(50),on='Dates')
+# do=pd.merge(pd.merge(fred_request_series('GDP').tail(50),fred_request_series('GDPCA').tail(50),on='Dates'),fred_request_series('DCOILWTICO').tail(50),on='Dates')
 # do1=lag_transform(do,n=3)
 # do.corr(method='kendall')
 
@@ -113,10 +113,10 @@ series_definition=dict({
 ####################################################################
 #####    Function to merge data frames of series from FRED   #######
 ####################################################################
-def fred_merge(series_list):
-    d=fred_request_series(series_list[0],frequency='d',starttime='2005-01-01',transform='pch')
+def fred_merge(series_list,frequency):
+    d=fred_request_series(series_list[0],frequency=frequency,starttime='2005-01-01',transform='pch')
     for i in range(1,len(series_list)):
-        d=pd.merge(d,fred_request_series(series_list[i],frequency='d',starttime='2005-01-01',transform='pch'),on='Dates' )
+        d=pd.merge(d,fred_request_series(series_list[i],frequency=frequency,starttime='2005-01-01',transform='pch'),on='Dates' )
     return d
 
 
@@ -128,10 +128,10 @@ def features_create(x): # x is a data frame
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
     for i in range(0,x.shape[0]):
         day.append(datetime.strptime(x.index[i],'%Y-%m-%d').weekday())
-        difsum.append((df.High[i]-df.Low[i])/(df.Open[i]+df.Close[i]))
-        sum_ohlc.append(np.mean([df.Open[i]+df.High[i]+df.Low[i]+df.Close[i]]))
-        dif_hl.append(df.High[i]-df.Low[i])
-        dif_oc.append(df.Open[i]-df.Close[i])
+        difsum.append((x.High[i]-x.Low[i])/(x.Open[i]+x.Close[i]))
+        sum_ohlc.append(np.mean([x.Open[i]+x.High[i]+x.Low[i]+x.Close[i]]))
+        dif_hl.append(x.High[i]-x.Low[i])
+        dif_oc.append(x.Open[i]-x.Close[i])
     x['Day']=day
     x['difsum_forex']=difsum
     x['Sum_forex']=sum_ohlc
@@ -167,14 +167,14 @@ def normalized_df(x):
 ###########################################################
 #####    RETREIVING DATA AND FEATURES ENGENEERING   #######
 ###########################################################
-dat_forex=forex_request('USD', 'EUR', frequency='d') # EUR for 1 USD
-df=pd.merge(dat_forex,fred_merge(list(series_definition.keys())),on='Dates')
-features_create(df)   # new data frame created with this line of code
+# dat_forex=forex_request('USD', 'EUR', frequency='d') # EUR for 1 USD
+# df=pd.merge(dat_forex,fred_merge(list(series_definition.keys())),on='Dates')
+# features_create(df)   # new data frame created with this line of code
 ############################################################
 
 
 ##########################################################
-####    Function to automate machine learning        #####
+####    Function to realize machine learning        #####
 ##########################################################
 
 def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2):
@@ -183,22 +183,24 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import GradientBoostingRegressor
     from sklearn import metrics
+    # dat_forex=forex_request(symbol1,symbol2, frequency=frequency) # EUR for 1 USD
+    # df=pd.merge(dat_forex,fred_merge(list(series_definition.keys())),on='Dates')
     
-    dat_forex=forex_request(symbol1,symbol2, frequency=frequency) # EUR for 1 USD
-    df=pd.merge(dat_forex,fred_merge(list(series_definition.keys())),on='Dates')
+    dat_forex=forex_request(symbol1, symbol2, frequency=frequency) # EUR for 1 USD
+    df=pd.merge(dat_forex,fred_merge(list(series_definition.keys()),frequency=frequency),on='Dates')
+    # return df
+# result=forex_learning(symbol2='EUR')
+    
+    ############################33
     features_create(df)   # new data frame created with this line of code
-    
     # transform variables to lag values
     df2=lag_transform(df, n=lag)
     df2=pd.merge(df[endogeneous],df2.iloc[:,5:],on='Dates')
-    
     # Defined label and features
-    y=df2[endogeneous]
+    y=df[endogeneous].iloc[:-lag]
     X=df2[df2.columns[df2.columns!=endogeneous]]
-    
     # normalize the features
     Xf=normalized_df(X)
-    
     # select featurest
     features_selected=features_select(Xf)
     X=features_selected[0]          # features selected
@@ -210,10 +212,8 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
     Xf=imput_missing.fit_transform(Xf) 
     Xf=pd.DataFrame(Xf)
     Xf.columns=features_columns;Xf.index=df2.index
-
     # splitting data to train and test groups 
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.25,random_state=0)  
-   
     lr=linspace(0.05,1,num=10)
     rmse=[];mae=[]
     for r in lr:
@@ -224,63 +224,68 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
         mae.append(metrics.mean_absolute_error(y_test,y_pred))
     return dict(zip(lr,rmse)),X_train,y_train,Xf
     
-result=forex_learning(symbol2='EUR') 
+# result=forex_learning(symbol2='EUR') 
 
-#############
-from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing, Holt
-dd=df
-dd=imput_missing.fit_transform(dd)
-dd=pd.DataFrame(X);dd.columns=df.columns
-fit1 =ExponentialSmoothing(
-    dd.SP500+abs(min(dd.SP500))+0.5,
-    seasonal_periods=7,
-    trend="mul",
-    seasonal="add",
-    damped_trend=True,
-    use_boxcox=True,
-    initialization_method="estimated",
-).fit()
-fcast1 = fit1.forecast(15).rename(r"$\alpha=0.2$")
-fcast1;fcast1.plot()
-df.Open.append(fcast1)
-op=df.Open
-for i in range(0,3):
-    fit1 = SimpleExpSmoothing(op, initialization_method="heuristic").fit(smoothing_level=0.2, optimized=False)
-    fcast1 = fit1.forecast(1).rename(r"$\alpha=0.2$")
-    op=op.append(fcast1)
-pd.DataFrame(dd)
 
-##########################
-def forex_forecast(result,n_forcast=7): # res: result of forex_learning
+
+#################################################################################
+## Function to forecast future values of the features, then those of the label ##
+#################################################################################
+def forex_forecast(model_res,n_forecast): # res: result of forex_learning
     import sklearn
     from sklearn.ensemble import GradientBoostingRegressor
     from datetime import datetime, date, timedelta
-
-    mod=GradientBoostingRegressor(learning_rate=min(result[0], key=result[0].get))
-    mod.fit(result[1],result[2])
-    # Forecast values of X for n periods
-    def fX_forecast(x): # x a data frame of X features to forecast in order to forecast y
-        y=[]
-        for i in x.columns:
-            xf=ExponentialSmoothing(result[3].Day,#x[i],
+    from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
+   
+    # Forecast values of a list for n periods
+    def fX_forecast(x,n_forecast): # x a data frame of X features to forecast in order to forecast y
+        import warnings
+        warnings.filterwarnings("ignore")
+        model_exp1=ExponentialSmoothing(x,
             seasonal_periods=7,
-            trend="mul",
-            seasonal="add",
-            damped_trend=True,
-            use_boxcox=True,
-            initialization_method="estimated"
-            ).fit()
-            y.append(fit1.forecast(15).rename(r"$\alpha=0.2$") )
-        d=pd.DataFrame(y).transpose()
-        # d.columns=result[3].columns
-        last_date=datetime.strptime(result[3].index[result[3].shape[0]-1], '%Y-%m-%d')
-        n_dates=[]
-        for j in range(1,n_forcast+1):
-            n_dates.append(last_date+timedelta(days=j))
-        d.index=n_dates
-        return d
-    y_pred=mod.predict(result[3])
-    return 
+            trend="mul", seasonal="add",damped_trend=True,use_boxcox=True,
+            initialization_method="estimated").fit()
+        y=model_exp1.forecast(n_forecast).rename(r"$\alpha=0.2$") 
+       # if the forecast values are nan, they are replaced by the last value of the variable
+        z=[]
+        for i in range(0,y.shape[0]): # replace np.nan by the last value of the variable
+            if isnan(y[i])==True:
+                z.append(x[len(x)-1])
+            else:
+                z.append(y[i])
+        
+        z=pd.DataFrame(z)  
+        z.index=y.index
+        return z
+    
+    y=[fX_forecast(model_res[3][i], n_forecast) for i in model_res[3].columns ] # list of forecast values of the features
+    d=pd.concat(y,axis=1)       # d is a data frame of forecast values of the features
+    d.columns=model_res[3].columns 
+        # last_date=datetime.strptime(model_res[3].index[len(model_res[3])-1], '%Y-%m-%d')
+        # fdate=[]
+        # for j in range(1,n_forecast+1):
+        #     fdate.append(datetime.strftime(last_date+timedelta(days=j),'%Y-%m-%d'))
+        # d.index=fdate
+    ##### Forecast of label for n_forecast period  #####
+    r_minRMSE=[i for i,j in model_res[0].items() if j==min(model_res[0].values())][0]
+    model1=GradientBoostingRegressor(learning_rate=r_minRMSE)
+    model1.fit(model_res[1],model_res[2])
+    ypred=model1.predict(d)
+    return pd.DataFrame(index=d.index.tolist(),data=ypred.tolist())
 
-fX_forecast(result[3])
-result[3]
+#####
+# forex_forecast(result,n_forecast=7)
+#####################
+
+############################################################
+#### FUNCTION TO AUTOMATE THE FORECAST OF EXCHANGE RATE ####
+###########################################################
+
+def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2,n_forecast=5):
+    model=forex_learning(symbol2=symbol2,symbol1=symbol1,endogeneous=endogeneous,frequency=frequency,lag=lag)
+    try:
+        return forex_forecast(model_res=model,n_forecast=n_forecast)
+    except:
+        return 'We cannot forecast the exchange rate for the exchnge rate '+symbol1+'/'+symbol2
+    
+forex_automated_forecast('GBP',n_forecast=10)
