@@ -127,7 +127,7 @@ from datetime import datetime
 def features_create(x): # x is a data frame
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
     for i in range(0,x.shape[0]):
-        day.append(datetime.strptime(x.index[i],'%Y-%m-%d').weekday())
+        day.append(datetime.strptime(x.index[i],'%Y-%m-%d').weekday()+1)
         difsum.append((x.High[i]-x.Low[i])/(x.Open[i]+x.Close[i]))
         sum_ohlc.append(np.mean([x.Open[i]+x.High[i]+x.Low[i]+x.Close[i]]))
         dif_hl.append(x.High[i]-x.Low[i])
@@ -159,7 +159,10 @@ def normalized_df(x):
         return [(i-min(z))/(max(z)-min(z))+.005 for i in z]
     h=[]
     for j in x.columns:
-        h.append(normalized(x[j]))
+        if j=='Day':        # if the feature j is Day, its values are kept without normalization
+            h.append(x[j])
+        else:
+            h.append(normalized(x[j]))
     d=pd.DataFrame(h).transpose()
     d.index=x.index;d.columns=x.columns
     return d
@@ -214,7 +217,7 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
     Xf.columns=features_columns;Xf.index=df2.index
     # splitting data to train and test groups 
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.25,random_state=0)  
-    lr=linspace(0.05,1,num=10)
+    lr=np.linspace(0.05,1,num=10)
     rmse=[];mae=[]
     for r in lr:
         mod=GradientBoostingRegressor(learning_rate=r)
@@ -231,47 +234,88 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
 #################################################################################
 ## Function to forecast future values of the features, then those of the label ##
 #################################################################################
-def forex_forecast(model_res,n_forecast): # res: result of forex_learning
+def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecasting period; model_res: result of forex_learning
     import sklearn
     from sklearn.ensemble import GradientBoostingRegressor
     from datetime import datetime, date, timedelta
     from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
-   
-    # Forecast values of a list for n periods
-    def fX_forecast(x,n_forecast): # x a data frame of X features to forecast in order to forecast y
+    
+    # identify future week days
+    def future_dates(x,n_forecast): # returns weekday
+        from datetime import datetime, date, timedelta
+        last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
+        fdate=[];fdate1=[]
+        for k in range(1,n_forecast+1): # k is the number of days to add to last date
+            fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
+            fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+        return fdate1
+    def future_dates0(x,n_forecast): # returns future dates in format '%Y-%m-%d'
+        from datetime import datetime, date, timedelta
+        last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
+        fdate=[];fdate1=[]
+        for k in range(1,n_forecast+1): # k is the number of days to add to last date
+            fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
+            fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+        return fdate
+    
+        # Forecast values of a list for n periods
+    def fX_forecast(x,n_forecast): # x a list to forecast for n_forecast periods
+        from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
+        import numpy as np
         import warnings
-        warnings.filterwarnings("ignore")
+        warnings.filterwarnings("ignore") # to remove warning from the results of the regression
+        #########   
         model_exp1=ExponentialSmoothing(x,
             seasonal_periods=7,
             trend="mul", seasonal="add",damped_trend=True,use_boxcox=True,
             initialization_method="estimated").fit()
         y=model_exp1.forecast(n_forecast).rename(r"$\alpha=0.2$") 
-       # if the forecast values are nan, they are replaced by the last value of the variable
+         # if the forecast values are nan, they are replaced by the last value of the variable
         z=[]
         for i in range(0,y.shape[0]): # replace np.nan by the last value of the variable
-            if isnan(y[i])==True:
+            if np.isnan(y[i])==True:
                 z.append(x[len(x)-1])
             else:
-                z.append(y[i])
-        
-        z=pd.DataFrame(z)  
-        z.index=y.index
+                z.append(y[i])    
         return z
     
-    y=[fX_forecast(model_res[3][i], n_forecast) for i in model_res[3].columns ] # list of forecast values of the features
-    d=pd.concat(y,axis=1)       # d is a data frame of forecast values of the features
-    d.columns=model_res[3].columns 
-        # last_date=datetime.strptime(model_res[3].index[len(model_res[3])-1], '%Y-%m-%d')
-        # fdate=[]
-        # for j in range(1,n_forecast+1):
-        #     fdate.append(datetime.strftime(last_date+timedelta(days=j),'%Y-%m-%d'))
+    ################
+    # find position of the variable Day if it is selected as feature
+    # In this case, its future value should not be forecast, they should be future weekdays
+    def position_day(x):
+        pres_day1=['Day'==i for i in x[3].columns.tolist()]
+        if True in pres_day1: # if 'Day' is one of the selected features
+            pos_day=[i for i in range(0,len(pres_day1)) if pres_day1[i]==True][0]
+        else:               # if Day is not among selected features
+            pos_day=False 
+        return pos_day
+       ####
+    
+    if (position_day(model_res)!=0)==True:  # if 'Day' is not one of the selected features
+        yy=[fX_forecast(model_res[3].iloc[:,i], n_forecast) for i in range(0,len(model_res[3].columns.tolist())) ] # list of forecasted values of the features
+    elif (position_day(model_res)==0)==True: # if Day is one of selected features
+        yy=[]
+        for s in range(0,len(model_res[3].columns.tolist())):
+            if s==position_day(model_res):                      # if it is the feature 'Day'
+                yy.append(future_dates(model_res, n_forecast))
+            else:                                               # if it is another feature 
+                yy.append(fX_forecast(model_res[3].iloc[:,s],n_forecast))
+
+    z=pd.DataFrame(yy).transpose()  
+    z.index=future_dates0(model_res, n_forecast)
+       
+    
+    # y=[fX_forecast(model_res[3][i], n_forecast) for i in model_res[3].columns ] # list of forecasted values of the features
+    # d=pd.concat(y,axis=1)       # d is a data frame of forecast values of the features
+    # d.columns=model_res[3].columns 
+    # return z 
         # d.index=fdate
     ##### Forecast of label for n_forecast period  #####
     r_minRMSE=[i for i,j in model_res[0].items() if j==min(model_res[0].values())][0]
     model1=GradientBoostingRegressor(learning_rate=r_minRMSE)
     model1.fit(model_res[1],model_res[2])
-    ypred=model1.predict(d)
-    return pd.DataFrame(index=d.index.tolist(),data=ypred.tolist())
+    ypred=model1.predict(z)
+    return pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
 
 #####
 # forex_forecast(result,n_forecast=7)
@@ -286,6 +330,8 @@ def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency
     try:
         return forex_forecast(model_res=model,n_forecast=n_forecast)
     except:
-        return 'We cannot forecast the exchange rate for the exchnge rate '+symbol1+'/'+symbol2
+        return 'We cannot forecast data for the exchnge rate '+symbol1+'/'+symbol2
     
 forex_automated_forecast('GBP',n_forecast=10)
+##############################
+
