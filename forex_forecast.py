@@ -10,6 +10,8 @@ import numpy as np
 import json
 import matplotlib.pyplot as plt
 import sklearn
+import streamlit as st
+from PIL import Image
 ########################################################
 ###
 def forex_request(symbol1,symbol2,frequency):
@@ -78,20 +80,20 @@ def fred_request_series(series,frequency='a',starttime='1776-07-04',endtime='999
 #########################################################
 ### Function to transform data frame to n lag value #####
 #########################################################
-def lag_transform(x,n):
-    import numpy as np
-    import pandas as pd
-    def lag_values(s,n): # function to get lag values of a list s, for lag=n
-        for i in range(0,n):
-            s.append(np.nan)
-        return s[n:-n]
-    y=[]
-    for i in x.columns:
-        y.append(lag_values(x[i].tolist(),n))
-    df=pd.DataFrame(y) .transpose()
-    df.index=x.index[:len(x.index)-n]
-    df.columns=x.columns
-    return df   
+# def lag_transform(x,n):
+#     import numpy as np
+#     import pandas as pd
+#     def lag_values(s,n): # function to get lag values of a list s, for lag=n
+#         for i in range(0,n):
+#             s.append(np.nan)
+#         return s[n:-n]
+#     y=[]
+#     for i in x.columns:
+#         y.append(lag_values(x[i].tolist(),n))
+#     df=pd.DataFrame(y) .transpose()
+#     df.index=x.index[:len(x.index)-n]
+#     df.columns=x.columns
+#     return df   
 
 # do=pd.merge(pd.merge(fred_request_series('GDP').tail(50),fred_request_series('GDPCA').tail(50),on='Dates'),fred_request_series('DCOILWTICO').tail(50),on='Dates')
 # do1=lag_transform(do,n=3)
@@ -101,14 +103,20 @@ def lag_transform(x,n):
 ######   Definition of the Series used   ######
 ###############################################
 series_definition=dict({
-    'DCOILBRENTEU':'Crude Oil Prices - Brent Europe - $ per barrel',
-    'DCOILWTICO':'Crude Oil Prices - West Texas Intermediate (WTI) - Cushing, Oklahoma - $ per barrel',
-    'DFII10':'Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed - in %',
-    'DFII30':'Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed',
+    # 'DCOILBRENTEU':'Crude Oil Prices - Brent Europe - $ per barrel',
+    # 'DCOILWTICO':'Crude Oil Prices - West Texas Intermediate (WTI) - Cushing, Oklahoma - $ per barrel',
+    # 'DFII10':'Market Yield on U.S. Treasury Securities at 10-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed - in %',
+    # 'DFII30':'Market Yield on U.S. Treasury Securities at 30-Year Constant Maturity, Quoted on an Investment Basis, Inflation-Indexed',
     'NASDAQCOM': 'NASDAQ current Composite Index',
     'SP500':'S&P 500 current index',
     'BAMLHE00EHYIEY':'ICE BofA Euro High Yield Index Effective Yield - in %'
     })
+
+######## To verify the last date of FRED series  #########
+# for i in list(series_definition.keys()):
+#     print((fred_request_series(i,frequency='d').index[-1]))
+# ###################################################################
+
 
 ####################################################################
 #####    Function to merge data frames of series from FRED   #######
@@ -124,7 +132,7 @@ def fred_merge(series_list,frequency):
 ########       Function to create new features            #########
 ###################################################################
 from datetime import datetime
-def features_create(x): # x is a data frame
+def forex_features_create(x): # x is a data frame of FOREX data
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
     for i in range(0,x.shape[0]):
         day.append(datetime.strptime(x.index[i],'%Y-%m-%d').weekday()+1)
@@ -138,14 +146,33 @@ def features_create(x): # x is a data frame
     x['Dif_HL']=dif_hl
     x['Dif_OC']=dif_oc  
     return x
-
+###################
+def fred_features_create(x): # x is data frame of FRED series
+    import itertools
+    import pandas as pd
+    pairs=[i for i in itertools.combinations(iterable=x.columns.tolist(), r=2)]
+    ysum=[];yminus=[];yprod=[]
+    for p in pairs:
+        ysum.append(x[p[0]]+x[p[1]])
+        yminus.append(abs(x[p[0]]-x[p[1]]))
+        yprod.append(x[p[0]]*x[p[1]])
+    df_sum=pd.DataFrame(ysum).transpose()
+    df_minus=pd.DataFrame(yminus).transpose()
+    df_prod=pd.DataFrame(yprod).transpose()
+    df_sum.columns=[i[0]+'_sum_'+i[1] for i in pairs]
+    df_minus.columns=[i[0]+'_minus_'+i[1] for i in pairs]
+    df_prod.columns=[i[0]+'_prod_'+i[1] for i in pairs]
+    
+    df=pd.merge(pd.merge(df_sum,df_minus, on='Dates'), df_prod,on='Dates' )
+    df=pd.merge(x,df,on='Dates')
+    return df
 
 ###########################################################
 #####  Function to select features based on Variance ######
 ###########################################################
 def features_select(x): # x is the data frame or array of variables
     from sklearn.feature_selection import VarianceThreshold
-    selected = VarianceThreshold(threshold=0.01)
+    selected = VarianceThreshold(threshold=0.02)
     X=selected.fit_transform(x) # array of data of selected variables
     cols = selected.get_support(indices=True)   # index of selected variables
     cols_names=x.columns[cols]                  # names of selected variables
@@ -186,24 +213,29 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
     from sklearn.model_selection import train_test_split
     from sklearn.ensemble import GradientBoostingRegressor
     from sklearn import metrics
-    # dat_forex=forex_request(symbol1,symbol2, frequency=frequency) # EUR for 1 USD
-    # df=pd.merge(dat_forex,fred_merge(list(series_definition.keys())),on='Dates')
     
-    dat_forex=forex_request(symbol1, symbol2, frequency=frequency) # EUR for 1 USD
-    df=pd.merge(dat_forex,fred_merge(list(series_definition.keys()),frequency=frequency),on='Dates')
-    # return df
-# result=forex_learning(symbol2='EUR')
-    
-    ############################33
-    features_create(df)   # new data frame created with this line of code
-    # transform variables to lag values
-    df2=lag_transform(df, n=lag)
+    dat_forex=forex_features_create(forex_request(symbol1, symbol2, frequency=frequency)) # EUR for 1 USD
+    df=pd.merge(dat_forex,fred_features_create(fred_merge(list(series_definition.keys()),frequency=frequency)),on='Dates')
+ 
+    # forex_features_create(df)   # new data frame created with this line of code
+    # df=fred_features_create(df)
+    ###########
+    # dat_forex=forex_request(symbol1, symbol2, frequency=frequency) 
+    # # dat_fred=fred_merge(list(series_definition.keys())
+    # # forex_features_create(dat_forex)
+    # # fred_features_create(dat_fred)
+    # df=pd.merge(dat_forex,fred_merge(list(series_definition.keys()),on='Dates')
+    #########
+    df2=df.shift(lag).iloc[lag:,:]
     df2=pd.merge(df[endogeneous],df2.iloc[:,5:],on='Dates')
     # Defined label and features
-    y=df[endogeneous].iloc[:-lag]
-    X=df2[df2.columns[df2.columns!=endogeneous]]
+    # y=df[endogeneous].iloc[:-lag]
+    y=df[endogeneous][lag:]
+    # X=df2[df2.columns[df2.columns!=endogeneous]]
+    X=df2
     # normalize the features
     Xf=normalized_df(X)
+    
     # select featurest
     features_selected=features_select(Xf)
     X=features_selected[0]          # features selected
@@ -217,7 +249,7 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
     Xf.columns=features_columns;Xf.index=df2.index
     # splitting data to train and test groups 
     X_train, X_test, y_train, y_test= train_test_split(X, y,train_size=0.25,random_state=0)  
-    lr=np.linspace(0.05,1,num=10)
+    lr=np.linspace(0.01,0.5,num=10)
     rmse=[];mae=[]
     for r in lr:
         mod=GradientBoostingRegressor(learning_rate=r)
@@ -227,35 +259,80 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
         mae.append(metrics.mean_absolute_error(y_test,y_pred))
     return dict(zip(lr,rmse)),X_train,y_train,Xf
     
-# result=forex_learning(symbol2='EUR') 
+# result=forex_learning(symbol1='USD',symbol2='EUR',frequency='d') ;result[0]
 
 
 
 #################################################################################
 ## Function to forecast future values of the features, then those of the label ##
 #################################################################################
-def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecasting period; model_res: result of forex_learning
+def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of forecasting period; model_res: result of forex_learning
     import sklearn
     from sklearn.ensemble import GradientBoostingRegressor
     from datetime import datetime, date, timedelta
     from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
     
     # identify future week days
+    # def future_dates(x,n_forecast): # returns weekday
+    #     from datetime import datetime, date, timedelta
+    #     last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
+    #     fdate=[];fdate1=[]
+    #     for k in range(1,n_forecast+1): # k is the number of days to add to last date
+    #         fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
+    #         fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+    #     return fdate1
+    # def future_dates0(x,n_forecast): # returns future dates in format '%Y-%m-%d'
+    #     from datetime import datetime, date, timedelta
+    #     last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
+    #     fdate=[];fdate1=[]
+    #     for k in range(1,n_forecast+1): # k is the number of days to add to last date
+    #         fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
+    #         fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+    #     return fdate
     def future_dates(x,n_forecast): # returns weekday
         from datetime import datetime, date, timedelta
         last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
-        fdate=[];fdate1=[]
+        fdate=[];
+        # fdate.append(datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d')) # last date of available data
+        fdate1=[]
         for k in range(1,n_forecast+1): # k is the number of days to add to last date
-            fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
-            fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+            # last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d') 
+            da1=datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')
+            da2=(datetime.strptime(da1,'%Y-%m-%d')).weekday()
+            if (da2==5 or da2==6)==True:
+                if (da2==5)==True:
+                    fdate.append(datetime.strftime(last_date+timedelta(days=3),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
+                    fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
+                if (da2==6)==True:
+                    fdate.append(datetime.strftime(last_date+timedelta(days=2),'%Y-%m-%d')) # to have date in indicated format; +1 means add 1 days when the date is a sunday
+                    fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
+            else:
+                fdate.append(datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
+                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features     
+            last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d')  
         return fdate1
-    def future_dates0(x,n_forecast): # returns future dates in format '%Y-%m-%d'
+    ####
+    def future_dates0(x,n_forecast): # returns weekday
         from datetime import datetime, date, timedelta
         last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
-        fdate=[];fdate1=[]
+        fdate=[];
+        # fdate.append(datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d')) # last date of available data
+        fdate1=[]
         for k in range(1,n_forecast+1): # k is the number of days to add to last date
-            fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
-            fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
+            # last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d') 
+            da1=datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')
+            da2=(datetime.strptime(da1,'%Y-%m-%d')).weekday()
+            if (da2==5 or da2==6)==True:
+                if (da2==5)==True:
+                    fdate.append(datetime.strftime(last_date+timedelta(days=3),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
+                    fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
+                if (da2==6)==True:
+                    fdate.append(datetime.strftime(last_date+timedelta(days=2),'%Y-%m-%d')) # to have date in indicated format; +1 means add 1 days when the date is a sunday
+                    fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
+            else:
+                fdate.append(datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
+                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features     
+            last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d')  
         return fdate
     
         # Forecast values of a list for n periods
@@ -266,7 +343,7 @@ def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecast
         warnings.filterwarnings("ignore") # to remove warning from the results of the regression
         #########   
         model_exp1=ExponentialSmoothing(x,
-            seasonal_periods=7,
+            seasonal_periods=5,
             trend="mul", seasonal="add",damped_trend=True,use_boxcox=True,
             initialization_method="estimated").fit()
         y=model_exp1.forecast(n_forecast).rename(r"$\alpha=0.2$") 
@@ -301,9 +378,12 @@ def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecast
             else:                                               # if it is another feature 
                 yy.append(fX_forecast(model_res[3].iloc[:,s],n_forecast))
 
-    z=pd.DataFrame(yy).transpose()  
+    z=pd.DataFrame(yy).transpose()                  # data frame of forecasted features
     z.index=future_dates0(model_res, n_forecast)
-       
+    z.columns=model_res[3].columns                  # columns names are those of the features found in model_res[3]
+    z=pd.concat([model_res[3].iloc[-lag:,:],z])     # concat forecasted features with last data available for these features
+    z=z.shift(lag)                                  # shift data to use lag values of features as it is the case when estimating the model
+    z=z.dropna()
     
     # y=[fX_forecast(model_res[3][i], n_forecast) for i in model_res[3].columns ] # list of forecasted values of the features
     # d=pd.concat(y,axis=1)       # d is a data frame of forecast values of the features
@@ -315,7 +395,9 @@ def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecast
     model1=GradientBoostingRegressor(learning_rate=r_minRMSE)
     model1.fit(model_res[1],model_res[2])
     ypred=model1.predict(z)
-    return pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
+    dk=pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
+    dk.columns=['Forecast']
+    return dk#pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
 
 #####
 # forex_forecast(result,n_forecast=7)
@@ -328,10 +410,74 @@ def forex_forecast(model_res,n_forecast): # n_forecast is the number of forecast
 def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2,n_forecast=5):
     model=forex_learning(symbol2=symbol2,symbol1=symbol1,endogeneous=endogeneous,frequency=frequency,lag=lag)
     try:
-        return forex_forecast(model_res=model,n_forecast=n_forecast)
+        return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
     except:
         return 'We cannot forecast data for the exchnge rate '+symbol1+'/'+symbol2
     
-forex_automated_forecast('GBP',n_forecast=10)
+# forex_automated_forecast('GBP',n_forecast=10).plot()
 ##############################
+
+
+#########################################################
+#######      BUILDING STREAMLIT DASHBOARD        ########
+#########################################################
+from PIL import Image
+import seaborn as sns
+st.set_page_config(layout="wide")
+# forecastX=forex_automated_forecast('GBP',n_forecast=10)
+
+def fig1(currency1,currency2):
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
+    fd=forex_request(currency1,currency2,'d')
+    fig, ax = plt.subplots()
+    ax.plot(fd.tail(20).Close)
+    # ax.plot(forecastX.index,forecastX.Forecast)
+    plt.plot(forecastX)
+    plt.title('Forecasted exchange rate:'+currency1+'/'+currency2)
+    plt.xlabel('Dates')
+    plt.ylabel(currency1+'/'+currency2)
+    plt.xticks(rotation=30)
+#####
+def fig2(currency1,currency2):
+    st.set_option('deprecation.showPyplotGlobalUse', False)
+    forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
+    # fd=forex_request('HTG','USD','d')
+    fig, ax = plt.subplots()
+    ax.plot(forecastX)
+    # ax.plot(forecastX.index,forecastX.Forecast)
+    # plt.plot(fd.Close)
+    plt.title('Forecasted exchange rate:'+currency1+'/'+currency2)
+    plt.xlabel('Dates')
+    plt.ylabel(currency1+'/'+currency2)
+    plt.xticks(rotation=30)  
+# plt.show()
+    
+
+    
+st.title('Forecasted Exchange Rate')
+col1,col2=st.columns(2)
+
+currency1 = col1.selectbox("Select a currency ",
+                     ['USD', 'GBP', 'HTG','EUR'])
+currency2 = col2.selectbox("Select the other currency ",
+                     ['EUR', 'GBP', 'HTG','USD'])
+
+forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
+fd=forex_request(currency1,currency2,'d')    
+
+montant = col1.number_input("Enter the amount to convert to"+currency2,1)
+result=col2.number_input('Result',value=montant*2)
+
+
+# fig=plt.figure()
+# plt.plot(x=forecastX.index,y=forecastX.iloc[:,0])
+# sns.lineplot(x=forecastX.index,y=0,data=forecastX)
+col1.pyplot(fig1(currency1,currency2))
+col2.pyplot(fig2(currency1,currency2))
+# col2.dataframe(forecastX)
+col1.dataframe(fd.tail(10))
+col2.write(forecastX.tail(10))
+
+
 
