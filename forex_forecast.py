@@ -4,12 +4,15 @@ Created on Wed Oct  5 08:45:45 2022
 
 @author: Raulin L. Cadet
 """
-
+import pandas
+import numpy
+import matplotlib
+import matplotlib.pyplot
+import sklearn
 import pandas as pd
 import numpy as np
 import json
 import matplotlib.pyplot as plt
-import sklearn
 import streamlit as st
 from PIL import Image
 ########################################################
@@ -132,7 +135,7 @@ def fred_merge(series_list,frequency):
 ########       Function to create new features            #########
 ###################################################################
 from datetime import datetime
-from math import log
+
 def forex_features_create(x): # x is a data frame of FOREX data
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
     for i in range(0,x.shape[0]):
@@ -422,7 +425,7 @@ def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency
 #########################################################
 #######      BUILDING STREAMLIT DASHBOARD        ########
 #########################################################
-from PIL import Image
+
 import seaborn as sns
 st.set_page_config(layout="wide")
 # forecastX=forex_automated_forecast('GBP',n_forecast=10)
