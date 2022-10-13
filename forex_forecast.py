@@ -11,10 +11,13 @@ import matplotlib.pyplot
 import sklearn
 import pandas as pd
 import numpy as np
+import seaborn as sns
 import json
 import matplotlib.pyplot as plt
 import streamlit as st
 from PIL import Image
+import matplotlib.dates as mdates
+
 ########################################################
 ###
 def forex_request(symbol1,symbol2,frequency):
@@ -78,29 +81,6 @@ def fred_request_series(series,frequency='a',starttime='1776-07-04',endtime='999
     dat2.index=dat.index;dat2.columns=dat.columns
     return dat2
 #########################
-     
-
-#########################################################
-### Function to transform data frame to n lag value #####
-#########################################################
-# def lag_transform(x,n):
-#     import numpy as np
-#     import pandas as pd
-#     def lag_values(s,n): # function to get lag values of a list s, for lag=n
-#         for i in range(0,n):
-#             s.append(np.nan)
-#         return s[n:-n]
-#     y=[]
-#     for i in x.columns:
-#         y.append(lag_values(x[i].tolist(),n))
-#     df=pd.DataFrame(y) .transpose()
-#     df.index=x.index[:len(x.index)-n]
-#     df.columns=x.columns
-#     return df   
-
-# do=pd.merge(pd.merge(fred_request_series('GDP').tail(50),fred_request_series('GDPCA').tail(50),on='Dates'),fred_request_series('DCOILWTICO').tail(50),on='Dates')
-# do1=lag_transform(do,n=3)
-# do.corr(method='kendall')
 
 ###############################################
 ######   Definition of the Series used   ######
@@ -276,23 +256,6 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     from datetime import datetime, date, timedelta
     from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
     
-    # identify future week days
-    # def future_dates(x,n_forecast): # returns weekday
-    #     from datetime import datetime, date, timedelta
-    #     last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
-    #     fdate=[];fdate1=[]
-    #     for k in range(1,n_forecast+1): # k is the number of days to add to last date
-    #         fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
-    #         fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
-    #     return fdate1
-    # def future_dates0(x,n_forecast): # returns future dates in format '%Y-%m-%d'
-    #     from datetime import datetime, date, timedelta
-    #     last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
-    #     fdate=[];fdate1=[]
-    #     for k in range(1,n_forecast+1): # k is the number of days to add to last date
-    #         fdate.append(datetime.strftime(last_date+timedelta(days=k),'%Y-%m-%d')) # to have date in indicated format
-    #         fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)     
-    #     return fdate
     def future_dates(x,n_forecast): # returns weekday
         from datetime import datetime, date, timedelta
         last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
@@ -389,11 +352,6 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     z=z.shift(lag)                                  # shift data to use lag values of features as it is the case when estimating the model
     z=z.dropna()
     
-    # y=[fX_forecast(model_res[3][i], n_forecast) for i in model_res[3].columns ] # list of forecasted values of the features
-    # d=pd.concat(y,axis=1)       # d is a data frame of forecast values of the features
-    # d.columns=model_res[3].columns 
-    # return z 
-        # d.index=fdate
     ##### Forecast of label for n_forecast period  #####
     r_minRMSE=[i for i,j in model_res[0].items() if j==min(model_res[0].values())][0]
     model1=GradientBoostingRegressor(learning_rate=r_minRMSE)
@@ -401,17 +359,14 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     ypred=model1.predict(z)
     dk=pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
     dk.columns=['Forecast']
-    return dk#pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
+    return dk
 
-#####
-# forex_forecast(result,n_forecast=7)
-#####################
 
 ############################################################
 #### FUNCTION TO AUTOMATE THE FORECAST OF EXCHANGE RATE ####
-###########################################################
+############################################################
 
-def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2,n_forecast=5):
+def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',lag=2,n_forecast=5):
     model=forex_learning(symbol2=symbol2,symbol1=symbol1,endogeneous=endogeneous,frequency=frequency,lag=lag)
     try:
         return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
@@ -421,12 +376,12 @@ def forex_automated_forecast(symbol2,symbol1='USD',endogeneous='Close',frequency
 # forex_automated_forecast('GBP',n_forecast=10).plot()
 ##############################
 
-
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 #########################################################
-#######      BUILDING STREAMLIT DASHBOARD        ########
+#@@@@@@      BUILDING STREAMLIT DASHBOARD         @@@@@@#
 #########################################################
+#@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 
-import seaborn as sns
 st.set_page_config(layout="wide")
 # forecastX=forex_automated_forecast('GBP',n_forecast=10)
 
@@ -435,73 +390,58 @@ def fig1(currency1,currency2):
     forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
     fd=forex_request(currency1,currency2,'d')
     dd=fd.index.tolist()
-    dates=pandas.date_range(dd[0], periods=len(dd)-1, freq='m')
+    dates=pandas.date_range(dd[0], periods=len(dd), freq='d')
+    # fd.index=dates
+    # dates=pandas.date_range('2020-01-01', periods=200, freq='w');dates
+    dates1=list(set([datetime.strftime(i,'%y-%m') for i in dates]))
     fig, ax = plt.subplots()
-    ax.plot(fd.tail(90).Close,label='Historical')
-    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
-    # ax.plot(forecastX.index,forecastX.Forecast)
-    plt.plot(forecastX,label='Forecasted')
-    # plt.title('Exchange rate: '+currency1+'/'+currency2)
-    plt.xlabel('Dates')
-    plt.ylabel(currency1+'/'+currency2)
-    plt.xticks(rotation=30)
+    ax.plot(fd.tail(30).Close,label='Historical values')
+    ax.plot(forecastX,label='Forecasted values')
+    ax.set_xlabel('Dates')
+    ax.set_ylabel(currency1+'/'+currency2)
+    # ax.set_xlim([dd[0],dates[len(dd)-1]])
+    ax.xaxis.set_major_formatter(plt.FixedFormatter(dates1))
+    # ax.xticks(rotation=30)
+    ax.legend(loc='best')
 #####
-def fig2(currency1,currency2):
-    st.set_option('deprecation.showPyplotGlobalUse', False)
-    forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
-    # fd=forex_request('HTG','USD','d')
-    fig, ax = plt.subplots()
-    ax.plot(forecastX)
-    
-    # ax.plot(forecastX.index,forecastX.Forecast)
-    # plt.plot(fd.Close)
-    # plt.title('Forecasted exchange rate: '+currency1+'/'+currency2)
-    plt.xlabel('Dates')
-    plt.ylabel(currency1+'/'+currency2)
-    plt.xticks(rotation=30)  
-    plt.legend(loc="upper left")
-# plt.show()
     
 
 ########################################
 import streamlit.components.v1 as components
-st.title('Forecasted Exchange Rate')
-st.subheader('by Raulin L. Cadet')
-components.html("""<hr style="height:10px;border:none;color:#36719C;background-color:#333;" /> """)
-st.text(" ")
-st.text(" ")
+new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 70px;">Forecasted Exchange Rate</p>'
+st.markdown(new_title, unsafe_allow_html=True)
+author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Raulin L. Cadet</p>'
 
-##########################################
+st.markdown(author,unsafe_allow_html=True)
+st.markdown("---")
+# components.html("""<hr style="height:10px;border:none;color:#697C8F;background-color:#697C8F" /> """)
+# st.image(Image.open('dollar_rate.png'))
+# components.html("""Image by <a href="https://pixabay.com/users/geralt-9301/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Gerd Altmann</a> from <a href="https://pixabay.com//?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Pixabay</a>""")
 
 col1,col2,col3=st.columns([1,1,2])
+currencies_list=['USD','EUR','JPY', 'GBP', 'AUD','CAN','CHF','CNY','HKD','NZD']
+currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
+currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
 
-currency1 = col1.selectbox("Select a currency ",
-                     ['USD', 'GBP', 'HTG','EUR'])
-currency2 = col2.selectbox("Select the other currency ",
-                     ['EUR', 'GBP', 'HTG','USD'])
-
-forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
-fd=forex_request(currency1,currency2,'d')    
-
-montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
-result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
-
-col1.markdown("---")
-col2.markdown("---")
-# fig=plt.figure()
-# plt.plot(x=forecastX.index,y=forecastX.iloc[:,0])
-# sns.lineplot(x=forecastX.index,y=0,data=forecastX)
-col3.markdown('### Forecasted exchange rate: '+currency1+'/'+currency2)
-col3.pyplot(fig1(currency1,currency2))
-# col2.pyplot(fig2(currency1,currency2))
-# col2.dataframe(forecastX)
-df_forecastX=forecastX.iloc[-10:,:]
-df_fd=fd.tail(10)
-
-col1.markdown('### Exchange rate: '+currency1+'/'+currency2)
-col1.dataframe(df_fd)
-col2.markdown('### Forecasted exchange rate: '+currency1+'/'+currency2)
-col2.dataframe(df_forecastX)
-
-
-
+def forex_dashboard(currency1,currency2,n_forecast):
+    
+    fd=forex_request(currency1,currency2,'d')    
+    montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
+    result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
+    col1.markdown("---")
+    col2.markdown("---")
+    try:
+        forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
+        col3.markdown('#### Forecasted exchange rate: '+currency1+'/'+currency2)
+        col3.pyplot(fig1(currency1,currency2))
+        df_forecastX=forecastX.iloc[-n_forecast:,:]
+        df_fd=fd.tail(10)
+        
+        col1.markdown('#### Exchange rate: '+currency1+'/'+currency2)
+        col1.dataframe(df_fd)
+        col2.markdown('#### Forecasted exchange rate: '+currency1+'/'+currency2)
+        col2.dataframe(df_forecastX)
+    except:
+        st.write('We are sorry; we are unable to forecast the exchange rate between these two currencies. Maybe this is due to internet connection. Try to reload the page. This problem may due to the daily time series we have been able to collect as features. Try to replace one of these currencies by another one.')
+###################
+forex_dashboard(currency1,currency2,n_forecast=15)
