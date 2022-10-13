@@ -480,8 +480,8 @@ result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
 col1.pyplot(fig1(currency1,currency2))
 # col2.pyplot(fig2(currency1,currency2))
 # col2.dataframe(forecastX)
-col2.table(forecastX.tail(10))
-col3.table(fd.tail(10))
+col2.dataframe(forecastX.tail(10))
+col3.dataframe(fd.tail(10))
 
 
 
