@@ -434,11 +434,14 @@ def fig1(currency1,currency2):
     st.set_option('deprecation.showPyplotGlobalUse', False)
     forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
     fd=forex_request(currency1,currency2,'d')
+    dd=fd.index.tolist()
+    dates=pandas.date_range(dd[0], periods=len(dd)-1, freq='m')
     fig, ax = plt.subplots()
-    ax.plot(fd.tail(20).Close)
+    ax.plot(fd.tail(90).Close,label='Historical')
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%b'))
     # ax.plot(forecastX.index,forecastX.Forecast)
-    plt.plot(forecastX)
-    plt.title('Forecasted exchange rate:'+currency1+'/'+currency2)
+    plt.plot(forecastX,label='Forecasted')
+    # plt.title('Exchange rate: '+currency1+'/'+currency2)
     plt.xlabel('Dates')
     plt.ylabel(currency1+'/'+currency2)
     plt.xticks(rotation=30)
@@ -449,17 +452,27 @@ def fig2(currency1,currency2):
     # fd=forex_request('HTG','USD','d')
     fig, ax = plt.subplots()
     ax.plot(forecastX)
+    
     # ax.plot(forecastX.index,forecastX.Forecast)
     # plt.plot(fd.Close)
-    plt.title('Forecasted exchange rate:'+currency1+'/'+currency2)
+    # plt.title('Forecasted exchange rate: '+currency1+'/'+currency2)
     plt.xlabel('Dates')
     plt.ylabel(currency1+'/'+currency2)
     plt.xticks(rotation=30)  
+    plt.legend(loc="upper left")
 # plt.show()
     
 
-    
+########################################
+import streamlit.components.v1 as components
 st.title('Forecasted Exchange Rate')
+st.subheader('by Raulin L. Cadet')
+components.html("""<hr style="height:10px;border:none;color:#36719C;background-color:#333;" /> """)
+st.text(" ")
+st.text(" ")
+
+##########################################
+
 col1,col2,col3=st.columns([1,1,2])
 
 currency1 = col1.selectbox("Select a currency ",
@@ -470,19 +483,25 @@ currency2 = col2.selectbox("Select the other currency ",
 forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
 fd=forex_request(currency1,currency2,'d')    
 
-montant = col1.number_input("Enter the amount to convert to"+currency2,1)
+montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
 result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
 
-
+col1.markdown("---")
+col2.markdown("---")
 # fig=plt.figure()
 # plt.plot(x=forecastX.index,y=forecastX.iloc[:,0])
 # sns.lineplot(x=forecastX.index,y=0,data=forecastX)
-col1.pyplot(fig1(currency1,currency2))
+col3.markdown('### Forecasted exchange rate: '+currency1+'/'+currency2)
+col3.pyplot(fig1(currency1,currency2))
 # col2.pyplot(fig2(currency1,currency2))
 # col2.dataframe(forecastX)
-col3.dataframe(forecastX.iloc[-10:,:])
-st.dataframe(fd.tail(10))
+df_forecastX=forecastX.iloc[-10:,:]
+df_fd=fd.tail(10)
 
+col1.markdown('### Exchange rate: '+currency1+'/'+currency2)
+col1.dataframe(df_fd)
+col2.markdown('### Forecasted exchange rate: '+currency1+'/'+currency2)
+col2.dataframe(df_forecastX)
 
 
 
