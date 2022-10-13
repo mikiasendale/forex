@@ -132,11 +132,12 @@ def fred_merge(series_list,frequency):
 ########       Function to create new features            #########
 ###################################################################
 from datetime import datetime
+from math import log
 def forex_features_create(x): # x is a data frame of FOREX data
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
     for i in range(0,x.shape[0]):
         day.append(datetime.strptime(x.index[i],'%Y-%m-%d').weekday()+1)
-        difsum.append((x.High[i]-x.Low[i])/(x.Open[i]+x.Close[i]))
+        difsum.append(abs(x.High[i]-x.Low[i])/(x.Open[i]+x.Close[i]))
         sum_ohlc.append(np.mean([x.Open[i]+x.High[i]+x.Low[i]+x.Close[i]]))
         dif_hl.append(x.High[i]-x.Low[i])
         dif_oc.append(x.Open[i]-x.Close[i])
@@ -153,9 +154,9 @@ def fred_features_create(x): # x is data frame of FRED series
     pairs=[i for i in itertools.combinations(iterable=x.columns.tolist(), r=2)]
     ysum=[];yminus=[];yprod=[]
     for p in pairs:
-        ysum.append(x[p[0]]+x[p[1]])
-        yminus.append(abs(x[p[0]]-x[p[1]]))
-        yprod.append(x[p[0]]*x[p[1]])
+        ysum.append(abs(x[p[0]]+x[p[1]])/x[p[0]])
+        yminus.append(abs(x[p[0]]-x[p[1]])/x[p[1]])
+        yprod.append(abs(x[p[0]]*x[p[1]])/(x[p[0]]+x[p[1]]))
     df_sum=pd.DataFrame(ysum).transpose()
     df_minus=pd.DataFrame(yminus).transpose()
     df_prod=pd.DataFrame(yprod).transpose()
@@ -456,7 +457,7 @@ def fig2(currency1,currency2):
 
     
 st.title('Forecasted Exchange Rate')
-col1,col2=st.columns(2)
+col1,col2,col3=st.columns([1,1,2])
 
 currency1 = col1.selectbox("Select a currency ",
                      ['USD', 'GBP', 'HTG','EUR'])
@@ -467,17 +468,18 @@ forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecas
 fd=forex_request(currency1,currency2,'d')    
 
 montant = col1.number_input("Enter the amount to convert to"+currency2,1)
-result=col2.number_input('Result',value=montant*2)
+result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
 
 
 # fig=plt.figure()
 # plt.plot(x=forecastX.index,y=forecastX.iloc[:,0])
 # sns.lineplot(x=forecastX.index,y=0,data=forecastX)
 col1.pyplot(fig1(currency1,currency2))
-col2.pyplot(fig2(currency1,currency2))
+# col2.pyplot(fig2(currency1,currency2))
 # col2.dataframe(forecastX)
-col1.dataframe(fd.tail(10))
-col2.write(forecastX.tail(10))
+col2.table(forecastX.tail(10))
+col3.table(fd.tail(10))
+
 
 
 
