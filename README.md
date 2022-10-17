@@ -35,3 +35,9 @@ to train and test the machine learning algorithm chosen. These APIs are used in 
 have been converted to a structured data frame, using the modules json, requests, and pandas.
 
 ### Machine learning
+* Data is split to train and test data
+* The GradientBoostingRegressor algorithm of scikit-learn is used to train the model
+* A range of 10 values, for the learning rate is used in a loop, and the root squared... is calculated.
+* The learning rate with the lower rmse is kept as the best model
+* To forecast future values of the exchange rate, future values of the features are forecasted using the ExponentialSmoothing
+algorithm.
