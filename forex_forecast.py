@@ -385,7 +385,7 @@ def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',l
 #@@@@@@      BUILDING STREAMLIT DASHBOARD         @@@@@@#
 #########################################################
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
-n_forecast=10
+n_forecast=11
 st.set_page_config(layout="wide")
 
 
