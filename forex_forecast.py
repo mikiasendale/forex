@@ -442,7 +442,7 @@ col2.markdown("---")
 col3.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
 # col3.pyplot(fig1(currency1,currency2))
 col3.pyplot(fig1())
-df_forecastX=forecastX#.iloc[-n_forecast:,:]
+df_forecastX=forecastX[1:]#.iloc[-n_forecast:,:]
 df_fd=fd.tail(10)
 
 col1.markdown('#### Exchange rate: '+currency2+'/'+currency1)
