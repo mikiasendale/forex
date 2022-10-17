@@ -401,7 +401,7 @@ def fig1():
     # forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
     # fd=forex_request(currency1,currency2,'d')
     
-    dou=pandas.concat([fd.Close,forecastX.tail(n_forecast-1)],axis=1)
+    dou=pandas.concat([fd.Close,forecastX],axis=1)
     dou.columns=['Historical values','Forecasted values']
     dou.tail(90).plot()
     ###################
