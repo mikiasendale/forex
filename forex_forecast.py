@@ -431,6 +431,6 @@ df_fd=fd.tail(10)
 
 col1.markdown('#### Exchange rate: '+currency2+'/'+currency1)
 col1.dataframe(df_fd)
-col2.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
+col2.markdown('#### Forecasted: '+currency2+'/'+currency1)
 col2.dataframe(df_forecastX)
 
