@@ -17,6 +17,7 @@ import matplotlib.pyplot as plt
 import streamlit as st
 from PIL import Image
 import matplotlib.dates as mdates
+from datetime import datetime
 
 ########################################################
 ###
@@ -114,7 +115,7 @@ def fred_merge(series_list,frequency):
 ###################################################################
 ########       Function to create new features            #########
 ###################################################################
-from datetime import datetime
+
 
 def forex_features_create(x): # x is a data frame of FOREX data
     day=[];difsum=[];sum_ohlc=[];dif_hl=[];dif_oc=[]
@@ -156,7 +157,7 @@ def fred_features_create(x): # x is data frame of FRED series
 ###########################################################
 def features_select(x): # x is the data frame or array of variables
     from sklearn.feature_selection import VarianceThreshold
-    selected = VarianceThreshold(threshold=0.02)
+    selected = VarianceThreshold(threshold=0.001)
     X=selected.fit_transform(x) # array of data of selected variables
     cols = selected.get_support(indices=True)   # index of selected variables
     cols_names=x.columns[cols]                  # names of selected variables
@@ -257,7 +258,9 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     from statsmodels.tsa.api import ExponentialSmoothing, SimpleExpSmoothing
     
     def future_dates(x,n_forecast): # returns weekday
-        from datetime import datetime, date, timedelta
+        ''' 
+        the function returns weekday in this format '%Y-%m-%d'.
+        '''
         last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
         fdate=[];
         # fdate.append(datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d')) # last date of available data
@@ -275,11 +278,15 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
                     fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
             else:
                 fdate.append(datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
-                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features     
+                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to replace 0 value by 1 for forecasting exchange rate using day value as features     
             last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d')  
         return fdate1
     ####
-    def future_dates0(x,n_forecast): # returns weekday
+    def future_dates0(x,n_forecast): # 
+        ''' 
+        returns weekday as integer
+        n_forecast: number of days to forecast data
+        '''
         from datetime import datetime, date, timedelta
         last_date=datetime.strptime(x[3].index[len(x[3])-1], '%Y-%m-%d') # ok
         fdate=[];
@@ -298,7 +305,7 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
                     fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features   
             else:
                 fdate.append(datetime.strftime(last_date+timedelta(days=1),'%Y-%m-%d')) # to have date in indicated format; +2 means add 2 days when the date is a saturday
-                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to remove to replace 0 value by 1 for forecasting exchange rate using day value as features     
+                fdate1.append((datetime.strptime(fdate[k-1],'%Y-%m-%d')).weekday()+1)   # 1 is added to replace 0 value by 1 for forecasting exchange rate using day value as features     
             last_date=datetime.strptime(fdate[len(fdate)-1], '%Y-%m-%d')  
         return fdate
     
@@ -311,17 +318,18 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
         #########   
         model_exp1=ExponentialSmoothing(x,
             seasonal_periods=5,
-            trend="mul", seasonal="add",damped_trend=True,use_boxcox=True,
-            initialization_method="estimated").fit()
-        y=model_exp1.forecast(n_forecast).rename(r"$\alpha=0.2$") 
-         # if the forecast values are nan, they are replaced by the last value of the variable
+            trend="add", seasonal="add",damped_trend=True,use_boxcox=True,
+            initialization_method="estimated").fit()#.forecast(10).rename(r"$\alpha=0.2$") 
+        y=model_exp1.forecast(n_forecast)#.rename(r"$\alpha=0.2$") 
+        #  # if the forecast values are nan, they are replaced by the last value of the variable
         z=[]
-        for i in range(0,y.shape[0]): # replace np.nan by the last value of the variable
-            if np.isnan(y[i])==True:
+        for f in y: # replace np.nan by the last value of the variable
+            if np.isnan(f)==True:
                 z.append(x[len(x)-1])
             else:
-                z.append(y[i])    
+                z.append(f)    
         return z
+        # return y
     
     ################
     # find position of the variable Day if it is selected as feature
@@ -335,16 +343,16 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
         return pos_day
        ####
     
-    if (position_day(model_res)!=0)==True:  # if 'Day' is not one of the selected features
-        yy=[fX_forecast(model_res[3].iloc[:,i], n_forecast) for i in range(0,len(model_res[3].columns.tolist())) ] # list of forecasted values of the features
-    elif (position_day(model_res)==0)==True: # if Day is one of selected features
+    if position_day(model_res)==False:  # if 'Day' is not one of the selected features
+        yy=[fX_forecast(pd.DataFrame(model_res[3]).iloc[:,i], n_forecast) for i in range(0,len(model_res[3].columns.tolist())) ] # list of forecasted values of the features
+    elif position_day(model_res)!=False: # if Day is one of selected features
         yy=[]
-        for s in range(0,len(model_res[3].columns.tolist())):
+        for s in range(0,model_res[3].shape[1]):
             if s==position_day(model_res):                      # if it is the feature 'Day'
-                yy.append(future_dates(model_res, n_forecast))
+                yy.append(future_dates0(model_res, n_forecast))
             else:                                               # if it is another feature 
-                yy.append(fX_forecast(model_res[3].iloc[:,s],n_forecast))
-
+                yy.append(fX_forecast(pd.DataFrame(model_res[3]).iloc[:,s],n_forecast))
+   
     z=pd.DataFrame(yy).transpose()                  # data frame of forecasted features
     z.index=future_dates0(model_res, n_forecast)
     z.columns=model_res[3].columns                  # columns names are those of the features found in model_res[3]
@@ -360,8 +368,9 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     dk=pd.DataFrame(index=z.index.tolist(),data=ypred.tolist())
     dk.columns=['Forecast']
     return dk
+################
 
-
+# forex_forecast(result,10,2)
 ############################################################
 #### FUNCTION TO AUTOMATE THE FORECAST OF EXCHANGE RATE ####
 ############################################################
@@ -381,34 +390,29 @@ def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',l
 #@@@@@@      BUILDING STREAMLIT DASHBOARD         @@@@@@#
 #########################################################
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
-
+n_forecast=10
 st.set_page_config(layout="wide")
 # forecastX=forex_automated_forecast('GBP',n_forecast=10)
 
-def fig1(currency1,currency2):
+# def fig1(currency1,currency2):
+def fig1():
     st.set_option('deprecation.showPyplotGlobalUse', False)
-    forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=10)
-    fd=forex_request(currency1,currency2,'d')
-    dd=fd.index.tolist()
-    dates=pandas.date_range(dd[0], periods=len(dd), freq='d')
-    # fd.index=dates
-    # dates=pandas.date_range('2020-01-01', periods=200, freq='w');dates
-    dates1=list(set([datetime.strftime(i,'%y-%m') for i in dates]))
-    fig, ax = plt.subplots()
-    ax.plot(fd.tail(30).Close,label='Historical values')
-    ax.plot(forecastX,label='Forecasted values')
-    ax.set_xlabel('Dates')
-    ax.set_ylabel(currency1+'/'+currency2)
-    # ax.set_xlim([dd[0],dates[len(dd)-1]])
-    ax.xaxis.set_major_formatter(plt.FixedFormatter(dates1))
+    # forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
+    # fd=forex_request(currency1,currency2,'d')
+    
+    dou=pd.concat([fd.Close,forecastX.tail(n_forecast-1)],axis=1)
+    dou.columns=['Historical values','Forecasted values']
+    dou.tail(90).plot()
+    ###################
+
     # ax.xticks(rotation=30)
-    ax.legend(loc='best')
+    # ax.legend(loc='best')
 #####
     
 
 ########################################
 import streamlit.components.v1 as components
-new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 70px;">Forecasted Exchange Rate</p>'
+new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 60px;">Forecasted Exchange Rate</p>'
 st.markdown(new_title, unsafe_allow_html=True)
 author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Raulin L. Cadet</p>'
 
@@ -418,30 +422,32 @@ st.markdown("---")
 # st.image(Image.open('dollar_rate.png'))
 # components.html("""Image by <a href="https://pixabay.com/users/geralt-9301/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Gerd Altmann</a> from <a href="https://pixabay.com//?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Pixabay</a>""")
 
+
+
 col1,col2,col3=st.columns([1,1,2])
-currencies_list=['USD','EUR','JPY', 'GBP', 'AUD','CAN','CHF','CNY','HKD','NZD']
+currencies_list=['USD','EUR','JPY', 'GBP', 'AUD','CAD','CHF','CNY','HKD','NZD']
 currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
 currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
 
-def forex_dashboard(currency1,currency2,n_forecast):
-    
-    fd=forex_request(currency1,currency2,'d')    
-    montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
-    result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
-    col1.markdown("---")
-    col2.markdown("---")
-    try:
-        forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
-        col3.markdown('#### Forecasted exchange rate: '+currency1+'/'+currency2)
-        col3.pyplot(fig1(currency1,currency2))
-        df_forecastX=forecastX.iloc[-n_forecast:,:]
-        df_fd=fd.tail(10)
-        
-        col1.markdown('#### Exchange rate: '+currency1+'/'+currency2)
-        col1.dataframe(df_fd)
-        col2.markdown('#### Forecasted exchange rate: '+currency1+'/'+currency2)
-        col2.dataframe(df_forecastX)
-    except:
-        st.write('We are sorry; we are unable to forecast the exchange rate between these two currencies. Maybe this is due to internet connection. Try to reload the page. This problem may due to the daily time series we have been able to collect as features. Try to replace one of these currencies by another one.')
+forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
+fd=forex_request(currency1,currency2,'d')    
+
+montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
+result=col2.number_input('Result',value=montant*fd.tail(1).Close.tolist()[0])
+col1.markdown("---")
+col2.markdown("---")
+
+col3.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
+# col3.pyplot(fig1(currency1,currency2))
+col3.pyplot(fig1())
+df_forecastX=forecastX#.iloc[-n_forecast:,:]
+df_fd=fd.tail(10)
+
+col1.markdown('#### Exchange rate: '+currency2+'/'+currency1)
+col1.dataframe(df_fd)
+col2.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
+col2.dataframe(df_forecastX.tail(n_forecast-1))
+
+# st.write('We are sorry; we are unable to forecast the exchange rate between these two currencies. Maybe this is due to internet connection. Try to reload the page. This problem may due to the daily time series we have been able to collect as features. Try to replace one of these currencies by another one.')
 ###################
-forex_dashboard(currency1,currency2,n_forecast=15)
+
