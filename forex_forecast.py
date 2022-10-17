@@ -377,10 +377,10 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
 
 def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',lag=2,n_forecast=5):
     model=forex_learning(symbol2=symbol2,symbol1=symbol1,endogeneous=endogeneous,frequency=frequency,lag=lag)
-    try:
-        return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
-    except:
-        return 'We cannot forecast data for the exchnge rate '+symbol1+'/'+symbol2
+    
+    return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
+    # except:
+    #     return 'We cannot forecast data for the exchnge rate '+symbol1+'/'+symbol2
     
 # forex_automated_forecast('GBP',n_forecast=10).plot()
 ##############################
