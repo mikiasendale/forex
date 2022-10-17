@@ -431,6 +431,7 @@ currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
 currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
 
 forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
+forecastX=pandas.DataFrame(forecastX)
 fd=forex_request(currency1,currency2,'d')    
 
 montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
