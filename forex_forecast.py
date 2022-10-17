@@ -244,8 +244,6 @@ def forex_learning(symbol2,symbol1='USD',endogeneous='Close',frequency='d',lag=2
         mae.append(metrics.mean_absolute_error(y_test,y_pred))
     return dict(zip(lr,rmse)),X_train,y_train,Xf
     
-# result=forex_learning(symbol1='USD',symbol2='EUR',frequency='d') ;result[0]
-
 
 
 #################################################################################
@@ -370,7 +368,7 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
     return dk
 ################
 
-# forex_forecast(result,10,2)
+
 ############################################################
 #### FUNCTION TO AUTOMATE THE FORECAST OF EXCHANGE RATE ####
 ############################################################
@@ -379,10 +377,7 @@ def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',l
     model=forex_learning(symbol2=symbol2,symbol1=symbol1,endogeneous=endogeneous,frequency=frequency,lag=lag)
     
     return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
-    # except:
-    #     return 'We cannot forecast data for the exchnge rate '+symbol1+'/'+symbol2
     
-# forex_automated_forecast('GBP',n_forecast=10).plot()
 ##############################
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
@@ -392,23 +387,16 @@ def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',l
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 n_forecast=10
 st.set_page_config(layout="wide")
-# forecastX=forex_automated_forecast('GBP',n_forecast=10)
 
-# def fig1(currency1,currency2):
+
 def fig1():
     import pandas
     st.set_option('deprecation.showPyplotGlobalUse', False)
-    # forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
-    # fd=forex_request(currency1,currency2,'d')
-    
     dou=pandas.concat([fd.Close,forecastX],axis=1)
     dou.columns=['Historical values','Forecasted values']
     dou.tail(90).plot()
     ###################
 
-    # ax.xticks(rotation=30)
-    # ax.legend(loc='best')
-#####
     
 
 ########################################
@@ -419,10 +407,6 @@ author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Rau
 
 st.markdown(author,unsafe_allow_html=True)
 st.markdown("---")
-# components.html("""<hr style="height:10px;border:none;color:#697C8F;background-color:#697C8F" /> """)
-# st.image(Image.open('dollar_rate.png'))
-# components.html("""Image by <a href="https://pixabay.com/users/geralt-9301/?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Gerd Altmann</a> from <a href="https://pixabay.com//?utm_source=link-attribution&amp;utm_medium=referral&amp;utm_campaign=image&amp;utm_content=544949">Pixabay</a>""")
-
 
 
 col1,col2,col3=st.columns([1,1,2])
@@ -449,7 +433,4 @@ col1.markdown('#### Exchange rate: '+currency2+'/'+currency1)
 col1.dataframe(df_fd)
 col2.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
 col2.dataframe(df_forecastX)
-
-# st.write('We are sorry; we are unable to forecast the exchange rate between these two currencies. Maybe this is due to internet connection. Try to reload the page. This problem may due to the daily time series we have been able to collect as features. Try to replace one of these currencies by another one.')
-###################
 
