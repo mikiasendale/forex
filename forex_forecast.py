@@ -431,7 +431,7 @@ currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
 currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
 
 forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
-forecastX=pandas.DataFrame(forecastX)
+forecastX=forecastX[1:]
 fd=forex_request(currency1,currency2,'d')    
 
 montant = col1.number_input('Enter the amount of '+currency1+' to convert to '+currency2,1)
@@ -442,13 +442,13 @@ col2.markdown("---")
 col3.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
 # col3.pyplot(fig1(currency1,currency2))
 col3.pyplot(fig1())
-df_forecastX=forecastX[1:]#.iloc[-n_forecast:,:]
+df_forecastX=forecastX#.iloc[-n_forecast:,:]
 df_fd=fd.tail(10)
 
 col1.markdown('#### Exchange rate: '+currency2+'/'+currency1)
 col1.dataframe(df_fd)
 col2.markdown('#### Forecasted exchange rate: '+currency2+'/'+currency1)
-col2.dataframe(df_forecastX.tail(n_forecast-1))
+col2.dataframe(df_forecastX)
 
 # st.write('We are sorry; we are unable to forecast the exchange rate between these two currencies. Maybe this is due to internet connection. Try to reload the page. This problem may due to the daily time series we have been able to collect as features. Try to replace one of these currencies by another one.')
 ###################
