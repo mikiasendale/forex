@@ -316,7 +316,7 @@ def forex_forecast(model_res,n_forecast,lag=2): # n_forecast is the number of fo
         #########   
         model_exp1=ExponentialSmoothing(x,
             seasonal_periods=5,
-            trend="mul", seasonal="add",damped_trend=True,use_boxcox=True,
+            trend="add", seasonal="add",damped_trend=True,use_boxcox=True,
             initialization_method="estimated").fit()#.forecast(10).rename(r"$\alpha=0.2$") 
         y=model_exp1.forecast(n_forecast)#.rename(r"$\alpha=0.2$") 
         #  # if the forecast values are nan, they are replaced by the last value of the variable
