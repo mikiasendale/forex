@@ -24,7 +24,7 @@ from datetime import datetime
 def forex_request(symbol1,symbol2,frequency):
     import requests
     import json
-    import pandas as pd
+    import pandas 
     my_api='CJA0RCBPJIL23J4D'
     if frequency=='d':
         url='https://www.alphavantage.co/query?function=FX_DAILY&from_symbol='+symbol1+'&to_symbol='+symbol2+'&outputsize=full'+'&apikey='+my_api
@@ -37,15 +37,15 @@ def forex_request(symbol1,symbol2,frequency):
     data = r.json()
     dat=[i for i in data.items()]
    
-    df=pd.DataFrame([j for i,j in [i for i in dat[1][1].items()]])
+    df=pandas.DataFrame([j for i,j in [i for i in dat[1][1].items()]])
     df['Dates']=sdates=[d for (d,v) in [i for i in dat[1][1].items()]]
     df=df.set_index('Dates');df.columns=['Open','High','Low','Close']
     
     # change data to numeric, since they are strings
     y=[]
     for c in df.columns:
-        y.append(pd.to_numeric(df[c]))
-    df2=pd.DataFrame(y).transpose()
+        y.append(pandas.to_numeric(df[c]))
+    df2=pandas.DataFrame(y).transpose()
     #df2=df2.reset_index('Dates');df2.columns=['Open','High','Low','Close']
     
     return df2[::-1] # to reverse data, so that most recent data appear at the tail of the data frame
@@ -134,16 +134,16 @@ def forex_features_create(x): # x is a data frame of FOREX data
 ###################
 def fred_features_create(x): # x is data frame of FRED series
     import itertools
-    import pandas as pd
+    import pandas
     pairs=[i for i in itertools.combinations(iterable=x.columns.tolist(), r=2)]
     ysum=[];yminus=[];yprod=[]
     for p in pairs:
         ysum.append(abs(x[p[0]]+x[p[1]])/x[p[0]])
         yminus.append(abs(x[p[0]]-x[p[1]])/x[p[1]])
         yprod.append(abs(x[p[0]]*x[p[1]])/(x[p[0]]+x[p[1]]))
-    df_sum=pd.DataFrame(ysum).transpose()
-    df_minus=pd.DataFrame(yminus).transpose()
-    df_prod=pd.DataFrame(yprod).transpose()
+    df_sum=pandas.DataFrame(ysum).transpose()
+    df_minus=pandas.DataFrame(yminus).transpose()
+    df_prod=pandas.DataFrame(yprod).transpose()
     df_sum.columns=[i[0]+'_sum_'+i[1] for i in pairs]
     df_minus.columns=[i[0]+'_minus_'+i[1] for i in pairs]
     df_prod.columns=[i[0]+'_prod_'+i[1] for i in pairs]
@@ -396,11 +396,12 @@ st.set_page_config(layout="wide")
 
 # def fig1(currency1,currency2):
 def fig1():
+    import pandas
     st.set_option('deprecation.showPyplotGlobalUse', False)
     # forecastX=forex_automated_forecast(symbol1=currency1,symbol2=currency2,n_forecast=n_forecast)
     # fd=forex_request(currency1,currency2,'d')
     
-    dou=pd.concat([fd.Close,forecastX.tail(n_forecast-1)],axis=1)
+    dou=pandas.concat([fd.Close,forecastX.tail(n_forecast-1)],axis=1)
     dou.columns=['Historical values','Forecasted values']
     dou.tail(90).plot()
     ###################
