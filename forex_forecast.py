@@ -401,7 +401,7 @@ def fig1():
 
 ########################################
 import streamlit.components.v1 as components
-new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 60px;">Forecasted Exchange Rate</p>'
+new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 60px;">Forecast Exchange Rate</p>'
 st.markdown(new_title, unsafe_allow_html=True)
 author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Raulin L. Cadet</p>'
 

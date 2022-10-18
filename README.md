@@ -1,11 +1,13 @@
 # Forecast Exchange Rate
-===========
 
 ![GitHub top language](https://img.shields.io/github/languages/top/raulincadet/forex?style=plastic)
 ![GitHub repo size](https://img.shields.io/github/repo-size/raulincadet/forex?color=green)
 ![GitHub language count](https://img.shields.io/github/languages/count/raulincadet/forex?style=flat-square)
 ![Lines of code](https://img.shields.io/tokei/lines/github/raulincadet/forex?color=orange&style=plastic)
 ![forex](dashboard.png)
+
+===========
+
 ## Description
 This is a machine learning project that forecast the daily exchange rate between the most traded currencies. 
 The dashboard produced by this project has these features:
