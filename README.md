@@ -6,7 +6,6 @@
 ![Lines of code](https://img.shields.io/tokei/lines/github/raulincadet/forex?color=orange&style=plastic)
 ![forex](dashboard.png)
 
-===========
 
 ## Description
 This is a machine learning project that forecast the daily exchange rate between the most traded currencies. 
