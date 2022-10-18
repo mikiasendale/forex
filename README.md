@@ -16,7 +16,8 @@ are provided in a table, for the last 10 days.
 * The forecasted values of the exchange rate are provided in a table.
 * A graphic present the historical values of the exchange rate, for the last 90 days, and the forecasted values for 10 future days.
 
- 
+To navigate through the dashboard, click [HERE](https://raulincadet-forex-forex-forecast-gk6cpq.streamlitapp.com/).
+
 ## Modules required to run the code
 * pandas
 * numpy
