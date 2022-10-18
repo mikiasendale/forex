@@ -408,7 +408,7 @@ author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Rau
 col1,col2,col3=st.columns([1,1,2])
 col1.markdown(author,unsafe_allow_html=True)
 # col2.markdown("[![Title](‘https://content.linkedin.com/content/dam/me/business/en-us/amp/brand-site/v2/bg/LI-Bug.svg.original.svg’)]('https://www.linkedin.com/in/raulincadet/')")
-col2.markdown("[![My profile]('https://content.linkedin.com/content/dam/me/business/en-us/amp/brand-site/v2/bg/LI-Bug.svg.original.svg')]('https://www.linkedin.com/in/raulincadet/')")
+col2.markdown("[![My profile]('LinkedIn_logo.png')]('https://www.linkedin.com/in/raulincadet/')")
 
 st.markdown("---")
 
