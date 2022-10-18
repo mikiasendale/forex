@@ -405,15 +405,13 @@ new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 60px;">
 st.markdown(new_title, unsafe_allow_html=True)
 author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Raulin L. Cadet</p>'
 
-col1,col2,col3=st.columns([1,1,2])
-col1.markdown(author,unsafe_allow_html=True)
-col2.markdown("[![Profile]('https://www.linkedin.com/feed/?doFeedRefresh=true&nis=true&lipi=urn%3Ali%3Apage%3Ad_flagship3_feed%3B2mbmxA4YR4WX7s98TAd0XA%3D%3D')]('https://www.linkedin.com/in/raulincadet/')")
-# col2.markdown("![My LinkedIn profile]('https://www.linkedin.com/in/raulincadet/')")
+
+st.markdown(author,unsafe_allow_html=True)
 
 st.markdown("---")
 
 
-# col1,col2,col3=st.columns([1,1,2])
+col1,col2,col3=st.columns([1,1,2])
 currencies_list=['USD','EUR','JPY', 'GBP', 'AUD','CAD','CHF','CNY','HKD','NZD']
 currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
 currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
