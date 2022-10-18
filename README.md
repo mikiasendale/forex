@@ -1,5 +1,6 @@
 # Forecast Exchange Rate
 ===========
+
 ![GitHub top language](https://img.shields.io/github/languages/top/raulincadet/forex?style=plastic)
 ![GitHub repo size](https://img.shields.io/github/repo-size/raulincadet/forex?color=green)
 ![GitHub language count](https://img.shields.io/github/languages/count/raulincadet/forex?style=flat-square)
@@ -28,16 +29,21 @@ are provided in a table, for the last 10 days.
 * streamlit
 
 ## Method
+
+As the user interacts with the dashboard, real time data are automatically collected and future values are forecasted.
+
 ### API required to retreive data
-To realize this project, data are retrieved, using two APIs. One from AlphaVantage to get daily exchange rate, and another One
+To realize this project, data are collected, using two APIs. One from Alpha Vantage to get daily exchange rate, and another One
 from the FRED API of the Federal Reserve Bank of St. Louis. The FRED API is used to retreive daily time series to be used as features
 to train and test the machine learning algorithm chosen. These APIs are used in the project without any dedicated python module. Data imported
 have been converted to a structured data frame, using the modules json, requests, and pandas.
 
 ### Machine learning
-* Data is split to train and test data
+* Data are splitted to train and test sets
 * The GradientBoostingRegressor algorithm of scikit-learn is used to train the model
 * A range of 10 values, for the learning rate is used in a loop, and the root squared... is calculated.
 * The learning rate with the lower rmse is kept as the best model
 * To forecast future values of the exchange rate, future values of the features are forecasted using the ExponentialSmoothing
 algorithm.
+
+
