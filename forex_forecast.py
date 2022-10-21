@@ -378,7 +378,7 @@ def forex_automated_forecast(symbol2,symbol1,endogeneous='Close',frequency='d',l
     
     return forex_forecast(model_res=model,n_forecast=n_forecast,lag=lag)
     
-##############################
+
 
 #@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@#
 #########################################################
@@ -400,6 +400,7 @@ def fig1():
     
 
 ########################################
+import streamlit as st 
 import streamlit.components.v1 as components
 new_title = '<p style="font-family:sans-serif; color:#36719C; font-size: 60px;">Forecast Exchange Rate</p>'
 st.markdown(new_title, unsafe_allow_html=True)
@@ -408,6 +409,7 @@ author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Rau
 
 st.markdown(author,unsafe_allow_html=True)
 
+st.write("[Code Source](https://github.com/raulincadet/forex)")
 st.markdown("---")
 
 

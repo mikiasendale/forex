@@ -137,6 +137,21 @@ def fred_features_create(x): # x is data frame of FRED series
 fred_features_create(df.iloc[:,0:3]).head(2)
 ####################################################3
 import seaborn as sns
-dr=result[3][:]
-sns.lineplot(x=datetime.date(dr.index),y=dr.iloc[:,0])
+
+dr=result[3].Close
+ddf=pd.Series(index=['2022-10-17','2022-10-18'],data=[0.923,0.926])
+dou=pd.concat([dr,ddf],axis=1)
+sns.lineplot(data=dou,x=dou.index,y=dou.Close,ci=True)
+sns.lineplot(data=dr,x=dr.Dates,y=dr.iloc[:,1])
 plt.show()
+
+##########33
+# Define the confidence interval
+ci = 0.1 * np.std(dou.Close) / np.mean(dou.Close)
+fig=plt.figure()
+plt.plot(dou.Close, color='red', lw=1)
+plt.fill_between(dou.index, (dou.Close-ci), (dou.Close+ci), color='lightblue', alpha=0.5)
+plt.show()
+####################333
+forX=forex_automated_forecast(symbol1='EUR',symbol2='USD',n_forecast=10)
+dou.tail(20).plot()
