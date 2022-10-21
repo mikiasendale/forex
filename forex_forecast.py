@@ -408,12 +408,13 @@ author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Rau
 
 
 st.markdown(author,unsafe_allow_html=True)
-
-st.write("[Code Source](https://github.com/raulincadet/forex)")
+col1,col2,col3=st.columns([1,1,2])
+col1.write("[Code Source](https://github.com/raulincadet/forex)")
+col2.write("[LinkedIn](https://www.linkedin.com/in/raulincadet/)")
 st.markdown("---")
 
 
-col1,col2,col3=st.columns([1,1,2])
+# col1,col2,col3=st.columns([1,1,2])
 currencies_list=['USD','EUR','JPY', 'GBP', 'AUD','CAD','CHF','CNY','HKD','NZD']
 currency1 = col1.selectbox("Select a currency ",sorted(currencies_list))
 currency2 = col2.selectbox("Select the other currency ",sorted(currencies_list,reverse=True))
