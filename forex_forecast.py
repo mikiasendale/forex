@@ -408,10 +408,12 @@ author = '<p style="font-family:sans-serif; color:#A06357; font-size: 25px;">Rau
 
 
 st.markdown(author,unsafe_allow_html=True)
+st.markdown("---")
 col1,col2,col3=st.columns([1,1,2])
 col1.write("[Code Source](https://github.com/raulincadet/forex)")
 col2.write("[LinkedIn](https://www.linkedin.com/in/raulincadet/)")
-st.markdown("---")
+col1.markdown("---")
+col2.markdown("---")
 
 
 # col1,col2,col3=st.columns([1,1,2])
